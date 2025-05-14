@@ -1,4 +1,4 @@
-public class UpdateCABatch implements Database.Batchable<SObject>, Schedulable {
+public class UpdateCABatch implements Database.Batchable<SObject> {
 
     // Query initiale - on récupère tous les comptes
     public Database.QueryLocator start(Database.BatchableContext bc) {
@@ -46,12 +46,5 @@ public class UpdateCABatch implements Database.Batchable<SObject>, Schedulable {
     // Étape 3 : Fin du traitement
     public void finish(Database.BatchableContext bc) {
         System.debug('Mise à jour du chiffre d\'affaire terminée.');
-    }
-
-    // Implémentation de la méthode execute de l'interface Schedulable
-    public void execute(SchedulableContext sc) {
-        // Lancer le batch lors de l'exécution du job planifié
-        UpdateCABatch batch = new UpdateCABatch();
-        Database.executeBatch(batch, 200); // Taille du lot de 200
     }
 }
