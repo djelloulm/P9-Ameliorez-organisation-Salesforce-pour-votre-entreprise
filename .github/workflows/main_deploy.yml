@@ -1,69 +1,46 @@
 name: Deploy and Validate Metadata
 
 on:
-  pull_request:
-    branches:
-      - dev
-      - main
+  workflow_dispatch:
   push:
-    branches:
-      - dev
-      - main
+    branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
-  sfdxvalidate:
-    name: "Run SFDX Validate"
+  deploy:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        node-version: [18.x]
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Set up Node.js ${{ matrix.node-version }}
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 18
 
-      - name: Install SFDX CLI
-        uses: sfdx-actions/setup-sfdx@v1
-
-      - name: Install sfdx-git-delta plugin
+      - name: Install Salesforce CLI
         run: |
-          sfdx plugins:install sfdx-git-delta@3.3.0
+          npm install --global @salesforce/cli
 
-      - name: Authenticate to Salesforce
+      - name: Authenticate with Salesforce
+        env:
+          SFDX_AUTH_URL: ${{ secrets.SFDX_AUTH_URL }}
         run: |
-          echo "${{ secrets.SFDX_AUTH_URL }}" > authFile.txt
-          sfdx auth:sfdxurl:store -f authFile.txt -a occ -d
+          echo "$SFDX_AUTH_URL" > auth.txt
+          sf org login sfdx-url --sfdx-url-file auth.txt --alias myOrg --set-default
 
-      - name: Generate metadata delta from pull request
+      - name: Generate Delta Package
         run: |
-          mkdir -p .temp
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          mkdir -p delta
           git fetch origin main
-          sfdx sgd:source:delta --to "HEAD" --from "origin/main" --output .temp --generate-delta
+          git diff --name-only origin/main...HEAD \
+            | grep ".*.xml" \
+            | xargs -I{} cp --parents {} delta/
 
-      - name: Check if delta package exists
-        id: delta_check
+      - name: Deploy Delta
         run: |
-          if [ -f ".temp/package/package.xml" ]; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Deploy metadata on main branch (check-only)
-        if: github.ref == 'refs/heads/main' && steps.delta_check.outputs.exists == 'true'
-        run: |
-          sfdx project deploy start --manifest .temp/package/package.xml --target-org occ --check-only --wait 10 --verbose
-
-      - name: Deploy metadata for real on main
-        if: github.ref == 'refs/heads/main' && steps.delta_check.outputs.exists == 'true'
-        run: |
-          sfdx project deploy start --manifest .temp/package/package.xml --target-org occ --wait 10 --verbose
+          sf project deploy start --metadata-dir delta \
+            --target-org myOrg --wait 10 --ignore-warnings --verbose
