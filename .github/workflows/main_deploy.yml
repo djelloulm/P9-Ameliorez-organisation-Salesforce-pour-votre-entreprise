@@ -49,15 +49,40 @@ jobs:
           git fetch origin main
           sfdx sgd:source:delta --to "HEAD" --from "origin/main" --output .temp --generate-delta
 
-      - name: Deploy metadata on main branch (check-only)
-        if: github.ref == 'refs/heads/main'
+      - name: Debug generated delta
         run: |
-          sfdx project deploy start --manifest .temp/package/package.xml --target-org occ --check-only --wait 10 --verbose
+          echo "Delta directory content:"
+          ls -la .temp/package || echo "No package directory"
 
-      - name: Deploy metadata for real on main
-        if: steps.validate.outcome == 'success' && github.ref == 'refs/heads/main'
+      - name: Check if delta package exists
+        id: delta_check
         run: |
           if [ -f ".temp/package/package.xml" ]; then
-            sfdx project deploy start --manifest .temp/package/package.xml --target-org occ --wait 10 --verbose
+            echo "exists=true" >> $GITHUB_OUTPUT
           else
-            echo "No delta package to deploy."
+            echo "exists=false" >> $GITHUB_OUTPUT
+
+      - name: Deploy metadata on main branch (check-only)
+        if: github.ref == 'refs/heads/main' && steps.delta_check.outputs.exists == 'true'
+        run: |
+          sfdx project deploy start \
+            --manifest .temp/package/package.xml \
+            --target-org occ \
+            --check-only \
+            --test-level RunLocalTests \
+            --wait 10 \
+            --verbose
+
+      - name: Deploy metadata for real on main
+        if: github.ref == 'refs/heads/main' && steps.delta_check.outputs.exists == 'true'
+        run: |
+          sfdx project deploy start \
+            --manifest .temp/package/package.xml \
+            --target-org occ \
+            --test-level RunLocalTests \
+            --wait 10 \
+            --verbose
+
+      - name: Skip deployment (no delta found)
+        if: steps.delta_check.outputs.exists == 'false'
+        run: echo "No metadata changes detected. Skipping deployment."
