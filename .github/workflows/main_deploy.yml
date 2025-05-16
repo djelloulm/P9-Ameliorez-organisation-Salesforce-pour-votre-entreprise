@@ -33,12 +33,14 @@ jobs:
           sf org login sfdx-url --sfdx-url-file auth.txt --alias myOrg --set-default
 
       - name: Generate Delta Package
+        env:
+          BRANCH_NAME: ${{ github.ref_name }}
         run: |
           mkdir -p delta
-          git fetch origin main
-          git diff --name-only origin/main...HEAD \
+          git fetch origin $BRANCH_NAME
+          git diff --name-only origin/$BRANCH_NAME...HEAD \
             | grep ".*.xml" \
-            | xargs -I{} cp --parents {} delta/
+            | xargs -I{} cp --parents {} delta/ || echo "No changes to deploy."
 
       - name: Deploy Delta
         run: |
