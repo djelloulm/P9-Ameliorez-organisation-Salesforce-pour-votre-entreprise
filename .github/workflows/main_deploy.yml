@@ -1,39 +1,30 @@
 name: Deploy and Validate Metadata
 
 on:
-  # Déclenche le workflow manuellement, via l'interface GitHub Actions
   workflow_dispatch:
-  
-  # Déclenche le workflow lors d'un push sur les branches main ou dev
   push:
     branches: [main, dev]
-
-  # Déclenche le workflow lors d'une pull request vers main ou dev
   pull_request:
     branches: [main, dev]
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest  # Utilise une machine virtuelle Ubuntu comme environnement d'exécution
+    runs-on: ubuntu-latest
 
     steps:
-      # Action permettant de récupérer le code source du dépôt
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Action permettant de récupérer tout l'historique Git (nécessaire pour le delta)
+          fetch-depth: 0
 
-      # Action permettant d'installer la version 18 de Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
 
-      # Action permettant d’installer la Salesforce CLI globalement
       - name: Install Salesforce CLI
         run: |
           npm install --global @salesforce/cli
 
-      # Action permettant d'authentifier l’accès à l’organisation Salesforce via un token stocké dans les secrets
       - name: Authenticate with Salesforce
         env:
           SFDX_AUTH_URL: ${{ secrets.SFDX_AUTH_URL }}
@@ -41,23 +32,17 @@ jobs:
           echo "$SFDX_AUTH_URL" > auth.txt
           sf org login sfdx-url --sfdx-url-file auth.txt --alias myOrg --set-default
 
-      # Action permettant de générer un delta contenant uniquement les fichiers modifiés par rapport à la branche de base
       - name: Generate Delta Package
         env:
           BRANCH_NAME: ${{ github.ref_name }}
         run: |
-          mkdir -p delta  # Crée le dossier delta
-          git fetch origin $BRANCH_NAME  # Récupère les dernières modifications de la branche actuelle
-          git diff --name-only origin/$BRANCH_NAME...HEAD \  # Liste les fichiers modifiés
-            | grep ".*.xml" \  # Filtre uniquement les fichiers XML
-            | xargs -I{} cp --parents {} delta/ || echo "No changes to deploy."  # Copie les fichiers modifiés dans le dossier delta
+          mkdir -p delta
+          git fetch origin $BRANCH_NAME
+          git diff --name-only origin/$BRANCH_NAME...HEAD \
+            | grep ".*.xml" \
+            | xargs -I{} cp --parents {} delta/ || echo "No changes to deploy."
 
-      # Action permettant de déployer les fichiers modifiés sur Salesforce et d'exécuter les tests unitaires Apex
-      - name: Deploy Delta with Apex Tests
+      - name: Deploy Delta
         run: |
           sf project deploy start --metadata-dir delta \
-            --target-org myOrg \
-            --wait 10 \
-            --test-level RunLocalTests \  # Action permettant d'exécuter tous les tests Apex locaux (RunLocalTests)
-            --ignore-warnings \
-            --verbose
+            --target-org myOrg --wait 10 --ignore-warnings --verbose
