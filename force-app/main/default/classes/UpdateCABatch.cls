@@ -26,7 +26,7 @@ public class UpdateCABatch implements Database.Batchable<SObject> {
             accountToTotalAmount.put(accId, total);
         }
 
-        // Mise à jour des comptes avec le montant agrégé
+        // Mise à jour des comptes avec le montant agrégé.
         List<Account> accountsToUpdate = new List<Account>();
 
         for (Account acc : scope) {

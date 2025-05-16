@@ -94,6 +94,6 @@ private class OrderTriggerHandlerTest {
         update order;
 
         order = [SELECT NetAmount__c FROM Order WHERE Id = :order.Id];
-        System.assertEquals(1000, order.NetAmount__c);  // 1000 - 0 (aucun frais de livraison)
+        System.assertEquals(1000, order.NetAmount__c);  // 1000 - 0 (aucun frais de livraison.)
     }
 }

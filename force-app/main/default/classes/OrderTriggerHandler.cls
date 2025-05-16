@@ -27,7 +27,7 @@ public class OrderTriggerHandler {
 
         if (accountIdsToUpdate.isEmpty()) return;
 
-        // Calculer la somme des TotalAmount des commandes "Activated" pour chaque compte
+        // Calculer la somme des TotalAmount des commandes "Activated" pour chaque compte.
         Map<Id, Decimal> accountToTotalAmount = new Map<Id, Decimal>();
 
         for (AggregateResult ar : [

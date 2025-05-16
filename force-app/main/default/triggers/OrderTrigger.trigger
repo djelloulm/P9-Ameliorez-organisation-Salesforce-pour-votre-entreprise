@@ -1,7 +1,7 @@
 /**
  * Trigger sur l'objet Order, qui gère :
- * - Le calcul du montant net (NetAmount__c) AVANT mise à jour
- * - La mise à jour du chiffre d'affaires du compte APRÈS mise à jour
+ * - Le calcul du montant net (NetAmount__c) AVANT mise à jour.
+ * - La mise à jour du chiffre d'affaires du compte APRÈS mise à jour.
  */
 trigger OrderTrigger on Order (before update, after update) {
 
