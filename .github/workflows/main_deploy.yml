@@ -40,18 +40,17 @@ jobs:
             | grep ".*.xml" \
             | xargs -I{} cp --parents {} delta/
 
-      - name: Deploy Delta with Tests
+      - name: Deploy Delta
         run: |
           sf project deploy start --metadata-dir delta \
-            --target-org myOrg --wait 10 --ignore-warnings \
-            --test-level RunLocalTests --verbose
+            --target-org myOrg --wait 10 --ignore-warnings --verbose
 
-      - name: Run All Apex Tests
+      - name: Run Apex Tests
         run: |
-          sf apex test run --target-org myOrg --all --wait 10 --result-format human --output-dir test-results
+          sf apex run tests --target-org myOrg --result-format human --output-dir test-results --wait 10
 
       - name: Upload Test Results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v2
         with:
           name: apex-test-results
           path: test-results/
