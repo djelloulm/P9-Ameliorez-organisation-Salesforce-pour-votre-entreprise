@@ -1,6 +1,7 @@
 name: Deploy and Validate Metadata
 
 on:
+  workflow_dispatch:  # Permet de lancer manuellement
   pull_request:
     branches:
       - main
@@ -29,24 +30,23 @@ jobs:
 
       - name: Install SFDX CLI and sfdx-git-delta plugin
         run: |
-          npm install -g @salesforce/cli@latest
-          echo "y" | npm install sfdx-git-delta@3.3.0 -g
+          npm install -g sfdx-cli
+          echo "y" | sfdx plugins:install sfdx-git-delta@3.3.0
 
       - name: Authentification Salesforce
         env:
           SFDX_AUTH_URL: ${{ secrets.SFDX_AUTH_URL }}
         run: |
           echo "$SFDX_AUTH_URL" > authfile.txt
-          sf org login sfdx-url --sfdx-url-file authfile.txt --set-default --alias myOrg
+          sfdx auth:sfdxurl:store -f authfile.txt --setdefaultusername --setalias myOrg
 
       - name: Generate metadata delta pull request
         run: |
           mkdir -p .delta
           git fetch origin main
-          git diff --name-only origin/main > changedFiles.txt
           sfdx sgd:source:delta --from origin/main --to HEAD --output .delta
 
       - name: Deploy metadata to main
         if: github.ref == 'refs/heads/main'
         run: |
-          sf project deploy start --manifest .delta/package/package.xml --target-org myOrg --ignore-warnings --wait 10 --verbose
+          sfdx force:source:deploy -x .delta/package/package.xml -u myOrg -w 10 --ignorewarnings
