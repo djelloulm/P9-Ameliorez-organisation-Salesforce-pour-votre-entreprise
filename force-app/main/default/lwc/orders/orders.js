@@ -20,7 +20,7 @@ export default class Orders extends LightningElement {
             })
             .catch(error => {
                 this.sumOrdersOfCurrentAccount = null;
-                this.errorMessage = 'Erreur lors de la récupération des commandes du compte.';
+                this.errorMessage = 'Erreur lors de la récupération des commandes.';
                 console.error(error);
             });
     }
