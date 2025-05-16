@@ -1,52 +1,46 @@
 name: Deploy and Validate Metadata
 
 on:
-  workflow_dispatch:  # Permet de lancer manuellement
-  pull_request:
-    branches:
-      - main
+  workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
-  sfdxvalidate:
-    name: "Run SFDX Validate"
+  deploy:
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        node-version: [18.x]
 
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 
+          fetch-depth: 0
 
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 18
 
-      - name: Install SFDX CLI and sfdx-git-delta plugin
+      - name: Install Salesforce CLI
         run: |
-          npm install -g sfdx-cli
-          echo "y" | sfdx plugins:install sfdx-git-delta@3.3.0
+          npm install --global @salesforce/cli
 
-      - name: Authentification Salesforce
+      - name: Authenticate with Salesforce
         env:
           SFDX_AUTH_URL: ${{ secrets.SFDX_AUTH_URL }}
         run: |
-          echo "$SFDX_AUTH_URL" > authfile.txt
-          sfdx auth:sfdxurl:store -f authfile.txt --setdefaultusername --setalias myOrg
+          echo "$SFDX_AUTH_URL" > auth.txt
+          sf org login sfdx-url --sfdx-url-file auth.txt --alias myOrg --set-default
 
-      - name: Generate metadata delta pull request
+      - name: Generate Delta Package
         run: |
-          mkdir -p .delta
+          mkdir -p delta
           git fetch origin main
-          sfdx sgd:source:delta --from origin/main --to HEAD --output .delta
+          git diff --name-only origin/main...HEAD \
+            | grep ".*.xml" \
+            | xargs -I{} cp --parents {} delta/
 
-      - name: Deploy metadata to main
-        if: github.ref == 'refs/heads/main'
+      - name: Deploy Delta
         run: |
-          sfdx force:source:deploy -x .delta/package/package.xml -u myOrg -w 10 --ignorewarnings
+          sf project deploy start --metadata-dir delta \
+            --target-org myOrg --wait 10 --ignore-warnings --verbose
