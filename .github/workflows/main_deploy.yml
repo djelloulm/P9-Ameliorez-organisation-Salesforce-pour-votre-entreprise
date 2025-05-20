@@ -39,8 +39,15 @@ jobs:
           mkdir -p delta
           git fetch origin $BRANCH_NAME
           git diff --name-only origin/$BRANCH_NAME...HEAD \
-            | grep ".*.xml" \
+            | grep -E "\.(cls|trigger|page|component|xml|js|css|svg|labels|permissionset|object|field|tab|workflow|flow|resource)$" \
             | xargs -I{} cp --parents {} delta/ || echo "No changes to deploy."
+
+      - name: Check for Changes
+        run: |
+          if [ -z "$(ls -A delta)" ]; then
+            echo "No changes detected. Skipping deployment."
+            exit 0
+          fi
 
       - name: Deploy Delta with Apex Tests
         run: |
