@@ -9,7 +9,7 @@ on:
 jobs:
   validate:
     if: github.ref == 'refs/heads/dev' || github.event_name == 'pull_request'
-    name: Validate Metadata
+    name: Validate Delta on Dev
     runs-on: ubuntu-latest
 
     steps:
@@ -32,14 +32,34 @@ jobs:
           echo "$SFDX_AUTH_URL" > auth.txt
           sf org login sfdx-url --sfdx-url-file auth.txt --alias devOrg --set-default
 
-      - name: Validate Metadata with Apex Tests
+      - name: Generate Delta Package
+        env:
+          BRANCH_NAME: ${{ github.ref_name }}
         run: |
-          sf project deploy validate --target-org devOrg \
-            --test-level RunLocalTests --verbose
+          mkdir -p delta
+          git fetch origin $BRANCH_NAME
+          git diff --name-only origin/$BRANCH_NAME...HEAD \
+            | grep -E "\.(cls|trigger|page|component|xml|js|css|svg|labels|permissionset|object|field|tab|workflow|flow|resource)$" \
+            | xargs -I{} cp --parents {} delta/ || echo "No changes to validate."
+
+      - name: Check for Changes
+        run: |
+          if [ -z "$(ls -A delta)" ]; then
+            echo "No changes detected. Skipping validation."
+            exit 0
+          fi
+
+      - name: Validate Delta Metadata with Apex Tests
+        run: |
+          sf project deploy validate \
+            --metadata-dir delta \
+            --target-org devOrg \
+            --test-level RunLocalTests \
+            --verbose
 
   deploy:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    name: Deploy to Production
+    name: Deploy Delta on Main
     needs: validate
     runs-on: ubuntu-latest
 
@@ -80,12 +100,12 @@ jobs:
             exit 0
           fi
 
-      - name: Deploy Metadata with Tests
+      - name: Deploy Metadata with Apex Tests
         run: |
-          sf project deploy start --metadata-dir delta \
+          sf project deploy start \
+            --metadata-dir delta \
             --target-org prodOrg \
             --wait 10 \
             --test-level RunLocalTests \
             --ignore-warnings \
             --verbose
-            
