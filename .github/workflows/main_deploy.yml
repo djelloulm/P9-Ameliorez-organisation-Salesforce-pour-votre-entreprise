@@ -1,14 +1,15 @@
-name: Deploy and Validate Metadata
+name: Salesforce CI/CD
 
 on:
-  workflow_dispatch:
   push:
-    branches: [main, dev]
+    branches: [dev, main]
   pull_request:
-    branches: [main, dev]
+    branches: [main]
 
 jobs:
-  deploy:
+  validate:
+    if: github.ref == 'refs/heads/dev' || github.event_name == 'pull_request'
+    name: Validate Metadata
     runs-on: ubuntu-latest
 
     steps:
@@ -22,15 +23,45 @@ jobs:
           node-version: 18
 
       - name: Install Salesforce CLI
-        run: |
-          npm install --global @salesforce/cli
+        run: npm install --global @salesforce/cli
 
-      - name: Authenticate with Salesforce
+      - name: Authenticate with Salesforce (Dev Org)
         env:
           SFDX_AUTH_URL: ${{ secrets.SFDX_AUTH_URL }}
         run: |
           echo "$SFDX_AUTH_URL" > auth.txt
-          sf org login sfdx-url --sfdx-url-file auth.txt --alias myOrg --set-default
+          sf org login sfdx-url --sfdx-url-file auth.txt --alias devOrg --set-default
+
+      - name: Validate Metadata with Apex Tests
+        run: |
+          sf project deploy validate --target-org devOrg \
+            --test-level RunLocalTests --verbose
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    name: Deploy to Production
+    needs: validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install Salesforce CLI
+        run: npm install --global @salesforce/cli
+
+      - name: Authenticate with Salesforce (Prod Org)
+        env:
+          SFDX_AUTH_URL: ${{ secrets.SFDX_AUTH_URL }}
+        run: |
+          echo "$SFDX_AUTH_URL" > auth.txt
+          sf org login sfdx-url --sfdx-url-file auth.txt --alias prodOrg --set-default
 
       - name: Generate Delta Package
         env:
@@ -49,10 +80,10 @@ jobs:
             exit 0
           fi
 
-      - name: Deploy Delta with Apex Tests
+      - name: Deploy Metadata with Tests
         run: |
           sf project deploy start --metadata-dir delta \
-            --target-org myOrg \
+            --target-org prodOrg \
             --wait 10 \
             --test-level RunLocalTests \
             --ignore-warnings \
