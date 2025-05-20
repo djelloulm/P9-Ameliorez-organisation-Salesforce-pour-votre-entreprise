@@ -74,7 +74,7 @@ public class TestDataFactory {
         return OLI;
 }
 public static void createTestUsers() {
-    // Récupération des profils "System Administrator" et "Sales"
+    // Récupération des profils "System Administrator" et "Sales."
     Profile sysAdminProfile = [SELECT Id FROM Profile WHERE Name = 'System Administrator' LIMIT 1];
     Profile salesProfile = [SELECT Id FROM Profile WHERE Name = 'Custom: Sales Profile' LIMIT 1];
 
