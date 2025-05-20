@@ -3,7 +3,7 @@ public with sharing class OrderController {
     @AuraEnabled(cacheable=true)
     public static Decimal getTotalOrderAmountByAccount(Id accountId) {
         if (accountId == null) {
-            throw new AuraHandledException('Id du compte est requis');
+            throw new AuraHandledException('Id du compte est obligatoire');
         }
 
         AggregateResult result = [

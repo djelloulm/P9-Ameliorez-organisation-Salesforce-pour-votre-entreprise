@@ -19,7 +19,7 @@ public class OrderTriggerHandler {
         for (Order newOrder : newOrders) {
             Order oldOrder = oldOrders.get(newOrder.Id);
 
-            // Ne prendre en compte que les commandes qui viennent d’être activées
+            // Ne prendre en compte que les commandes qui viennent d’être activées.
             if (oldOrder.Status != 'Activated' && newOrder.Status == 'Activated' && newOrder.AccountId != null) {
                 accountIdsToUpdate.add(newOrder.AccountId);
             }

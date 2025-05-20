@@ -50,6 +50,7 @@ private class UpdateCABatchTest {
 
         System.assertEquals(2500, acc1.Chiffre_d_Affaire__c);  
         System.assertEquals(2000, acc2.Chiffre_d_Affaire__c);  
+        
     }
 
     @isTest

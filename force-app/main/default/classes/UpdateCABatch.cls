@@ -12,7 +12,7 @@ public class UpdateCABatch implements Database.Batchable<SObject> {
             accountIds.add(acc.Id);
         }
 
-        // Prendre seulement les commandes dont le statut = "Validé" 
+        // Prendre seulement les commandes dont le statut = "Validé". 
         Map<Id, Decimal> accountToTotalAmount = new Map<Id, Decimal>();
 
         for (AggregateResult ar : [

@@ -74,7 +74,7 @@ private class OrderControllerTest {
         Decimal sum = OrderController.getTotalOrderAmountByAccount(acc.Id);
         Test.stopTest();
 
-        System.assertEquals(0, sum); // Non activé.
+        System.assertEquals(0, sum); // Non activé
     }
 
     @isTest

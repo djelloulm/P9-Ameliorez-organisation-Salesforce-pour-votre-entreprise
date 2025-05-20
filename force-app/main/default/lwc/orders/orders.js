@@ -15,7 +15,7 @@ export default class Orders extends LightningElement {
             .then(result => {
                 this.sumOrdersOfCurrentAccount = result;
 
-                // Pas besoin d’un message d’erreur ici, on gère ça dans le getter
+                // Pas besoin d’un message d’erreur ici, on gère ça dans le getter.
                 this.errorMessage = null;
             })
             .catch(error => {
